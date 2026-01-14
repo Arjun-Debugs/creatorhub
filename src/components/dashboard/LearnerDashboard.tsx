@@ -44,7 +44,25 @@ export default function LearnerDashboard() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-4xl font-bold mb-8">My Learning</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-4xl font-bold">My Learning</h1>
+        <Button onClick={async () => {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
+
+          const { error } = await supabase
+            .from("user_roles")
+            .upsert({ user_id: user.id, role: "creator" });
+
+          if (error) {
+            console.error(error);
+          } else {
+            window.location.reload();
+          }
+        }}>
+          Become a Creator
+        </Button>
+      </div>
 
       <Tabs defaultValue="courses" className="w-full">
         <TabsList className="grid w-full grid-cols-3 max-w-lg mb-8">

@@ -11,6 +11,11 @@ import { Navbar } from "@/components/Navbar";
 import { signUpSchema, signInSchema } from "@/lib/validation";
 import { Chrome } from "lucide-react";
 
+import { SEO } from "@/components/SEO";
+
+// ... imports remain the same, but for brevity I will only replace the parts I change.
+// Wait, I need to match the target content exactly.
+
 export default function Auth() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -110,9 +115,10 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen bg-gradient-hero">
+      <SEO title={isSignup ? "Sign Up" : "Sign In"} />
       <Navbar />
       <div className="container mx-auto px-4 pt-32 pb-20">
-        <Card className="max-w-md mx-auto shadow-hover">
+        <Card className="max-w-md mx-auto glass-card">
           <CardHeader>
             <CardTitle className="text-2xl text-center">
               {isSignup ? "Join CreatorHub" : "Welcome Back"}

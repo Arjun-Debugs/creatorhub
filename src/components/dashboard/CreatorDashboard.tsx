@@ -69,7 +69,7 @@ export default function CreatorDashboard() {
           .from("enrollments")
           .select("user_id")
           .in("course_id", courseIds);
-        
+
         const uniqueLearners = new Set(enrollments?.map(e => e.user_id) || []);
         learnersCount = uniqueLearners.size;
       }
@@ -218,11 +218,11 @@ export default function CreatorDashboard() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
                   <span className="font-medium">Total Revenue</span>
-                  <span className="text-2xl font-bold text-primary">$0.00</span>
+                  <span className="text-2xl font-bold text-primary">${stats.totalSales.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
                   <span className="font-medium">Pending Withdrawals</span>
-                  <span className="text-2xl font-bold text-secondary">$0.00</span>
+                  <span className="text-2xl font-bold text-secondary">${stats.totalSales.toFixed(2)}</span>
                 </div>
                 <p className="text-sm text-muted-foreground mt-4">Recent sales will appear here once you start earning.</p>
               </div>

@@ -5,6 +5,8 @@ import { Session } from "@supabase/supabase-js";
 import { Navbar } from "@/components/Navbar";
 import CreatorDashboard from "@/components/dashboard/CreatorDashboard";
 import LearnerDashboard from "@/components/dashboard/LearnerDashboard";
+import { SEO } from "@/components/SEO";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -52,19 +54,16 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="min-h-screen">
+        <SEO title="Dashboard" />
         <Navbar />
-        <div className="flex items-center justify-center pt-32">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading...</p>
-          </div>
-        </div>
+        <LoadingSpinner />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen">
+      <SEO title="Dashboard" />
       <Navbar />
       <div className="pt-20">
         {userRole === "creator" ? <CreatorDashboard /> : <LearnerDashboard />}

@@ -1,35 +1,83 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import DiscussionBoard from "@/components/community/DiscussionBoard";
+import LessonComments from "@/components/community/LessonComments";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ArrowLeft, PlayCircle, FileText, Lock, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, PlayCircle, FileText, Lock, CheckCircle2, ChevronDown, ChevronRight } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
+import { Module, Lesson } from "@/types";
+import { useSecureContent } from "@/hooks/useSecureContent";
+import { VideoWatermark } from "@/components/course/VideoWatermark";
+import { Module, Lesson } from "@/types";
 
 export default function CourseViewer() {
   const { courseId } = useParams();
   const navigate = useNavigate();
   const [course, setCourse] = useState<any>(null);
-  const [lessons, setLessons] = useState<any[]>([]);
-  const [currentLesson, setCurrentLesson] = useState<any>(null);
+  const [modules, setModules] = useState<(Module & { lessons: Lesson[] })[]>([]);
+  const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [contentUrl, setContentUrl] = useState<string>("");
   const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
-  const [enrollmentId, setEnrollmentId] = useState<string | null>(null);
-  const [creatorName, setCreatorName] = useState<string>("");
-  const [showWatermark, setShowWatermark] = useState(false);
+  const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     checkEnrollmentAndFetchCourse();
   }, [courseId]);
 
   useEffect(() => {
+    // Disable right-click
+    const disableRightClick = (e: MouseEvent) => {
+      e.preventDefault();
+      return false;
+    };
+
+    // Disable certain keyboard shortcuts
+    const disableShortcuts = (e: KeyboardEvent) => {
+      // Disable F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U, Ctrl+P
+      if (
+        e.keyCode === 123 || // F12
+        (e.ctrlKey && e.shiftKey && e.keyCode === 73) || // Ctrl+Shift+I
+        (e.ctrlKey && e.shiftKey && e.keyCode === 74) || // Ctrl+Shift+J
+        (e.ctrlKey && e.keyCode === 85) || // Ctrl+U
+        (e.ctrlKey && e.keyCode === 80) // Ctrl+P
+      ) {
+        e.preventDefault();
+        return false;
+      }
+    };
+
+    document.addEventListener('contextmenu', disableRightClick);
+    document.addEventListener('keydown', disableShortcuts);
+
+    return () => {
+      document.removeEventListener('contextmenu', disableRightClick);
+      document.removeEventListener('keydown', disableShortcuts);
+    };
+  }, []);
+
+  useEffect(() => {
     if (currentLesson) {
-      loadLessonContent();
+      // Ensure the module containing the lesson is expanded
+      if (currentLesson.module_id) {
+        setExpandedModules(prev => new Set(prev).add(currentLesson.module_id));
+      }
     }
   }, [currentLesson]);
+
+  const toggleModule = (moduleId: string) => {
+    const newExpanded = new Set(expandedModules);
+    if (newExpanded.has(moduleId)) {
+      newExpanded.delete(moduleId);
+    } else {
+      newExpanded.add(moduleId);
+    }
+    setExpandedModules(newExpanded);
+  };
 
   const checkEnrollmentAndFetchCourse = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -52,22 +100,7 @@ export default function CourseViewer() {
 
     setCourse(courseData);
 
-    // Fetch creator profile for watermark
-    const { data: creatorProfile } = await supabase
-      .from("profiles")
-      .select("name, show_watermark")
-      .eq("id", courseData.creator_id)
-      .single();
-
-    if (creatorProfile) {
-      setCreatorName(creatorProfile.name);
-      setShowWatermark(creatorProfile.show_watermark);
-      console.log("Watermark settings:", {
-        creatorName: creatorProfile.name,
-        showWatermark: creatorProfile.show_watermark
-      });
-    }
-
+    // Check Enrollment
     const { data: enrollmentData } = await supabase
       .from("enrollments")
       .select("*")
@@ -76,25 +109,37 @@ export default function CourseViewer() {
       .maybeSingle();
 
     setIsEnrolled(!!enrollmentData || courseData.is_free);
-    if (enrollmentData) {
-      setEnrollmentId(enrollmentData.id);
-    }
 
     if (enrollmentData || courseData.is_free) {
-      const { data: lessonsData, error: lessonsError } = await supabase
+      // Fetch Modules
+      const { data: modulesData } = await supabase
+        .from("modules")
+        .select("*")
+        .eq("course_id", courseId)
+        .order("order_index", { ascending: true });
+
+      // Fetch Lessons
+      const { data: lessonsData } = await supabase
         .from("lessons")
         .select("*")
         .eq("course_id", courseId)
         .order("order_index", { ascending: true });
 
-      if (!lessonsError && lessonsData) {
-        setLessons(lessonsData);
-        if (lessonsData.length > 0) {
-          setCurrentLesson(lessonsData[0]);
-        }
+      // Group Lessons
+      const combinedModules = (modulesData || []).map((mod: any) => ({
+        ...mod,
+        lessons: (lessonsData || []).filter((l: any) => l.module_id === mod.id),
+      }));
+
+      setModules(combinedModules);
+
+      // Auto-select first lesson if available and none selected
+      if (!currentLesson && combinedModules.length > 0 && combinedModules[0].lessons.length > 0) {
+        setCurrentLesson(combinedModules[0].lessons[0]);
+        setExpandedModules(new Set([combinedModules[0].id]));
       }
 
-      // Fetch completed lessons
+      // Fetch Completions
       const { data: completionsData } = await supabase
         .from("lesson_completions")
         .select("lesson_id")
@@ -109,15 +154,27 @@ export default function CourseViewer() {
     setLoading(false);
   };
 
-  const loadLessonContent = async () => {
-    if (!currentLesson?.content_url) return;
+  // Use secure content hook for automatic signed URL management
+  const {
+    url: contentUrl,
+    watermark,
+    loading: contentLoading,
+    error: contentError,
+    hasAccess: hasContentAccess,
+  } = useSecureContent(
+    currentLesson?.content_url || null,
+    {
+      courseId: courseId,
+      bucket: 'course-content',
+      autoRefresh: true,
+    }
+  );
 
-    const { data } = supabase.storage
-      .from('course-content')
-      .getPublicUrl(currentLesson.content_url);
-
-    setContentUrl(data.publicUrl);
-  };
+  useEffect(() => {
+    if (contentError) {
+      toast.error(contentError);
+    }
+  }, [contentError]);
 
   const handleEnrollFree = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -139,7 +196,7 @@ export default function CourseViewer() {
 
   const handleMarkComplete = async () => {
     if (!currentLesson) return;
-    
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
@@ -158,11 +215,29 @@ export default function CourseViewer() {
     } else {
       setCompletedLessons(prev => new Set([...prev, currentLesson.id]));
       toast.success("Lesson marked complete!");
-      
-      // Move to next lesson if available
-      const currentIndex = lessons.findIndex(l => l.id === currentLesson.id);
-      if (currentIndex < lessons.length - 1) {
-        setCurrentLesson(lessons[currentIndex + 1]);
+      moveToNextLesson();
+    }
+  };
+
+  const moveToNextLesson = () => {
+    if (!currentLesson) return;
+
+    // Find current module and lesson index
+    const currentModuleIndex = modules.findIndex(m => m.id === currentLesson.module_id);
+    if (currentModuleIndex === -1) return;
+
+    const currentModule = modules[currentModuleIndex];
+    const currentLessonIndex = currentModule.lessons.findIndex(l => l.id === currentLesson.id);
+
+    // Try next lesson in same module
+    if (currentLessonIndex < currentModule.lessons.length - 1) {
+      setCurrentLesson(currentModule.lessons[currentLessonIndex + 1]);
+    } else if (currentModuleIndex < modules.length - 1) {
+      // Try first lesson of next module
+      const nextModule = modules[currentModuleIndex + 1];
+      if (nextModule.lessons.length > 0) {
+        setCurrentLesson(nextModule.lessons[0]);
+        setExpandedModules(prev => new Set(prev).add(nextModule.id));
       }
     }
   };
@@ -172,12 +247,26 @@ export default function CourseViewer() {
 
     const fileExt = currentLesson.content_url.split('.').pop()?.toLowerCase();
 
-    if (['mp4', 'webm', 'ogg'].includes(fileExt)) {
+    if (['mp4', 'webm', 'ogg'].includes(fileExt || '')) {
       return (
-        <video controls controlsList="nodownload" className="w-full rounded-lg" key={contentUrl}>
-          <source src={contentUrl} type={`video/${fileExt}`} />
-          Your browser does not support video playback.
-        </video>
+        <div className="relative">
+          <video
+            controls
+            controlsList="nodownload"
+            className="w-full rounded-lg"
+            key={contentUrl}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            <source src={contentUrl} type={`video/${fileExt}`} />
+            Your browser does not support video playback.
+          </video>
+          {watermark && (
+            <VideoWatermark
+              text={watermark.text}
+              position={watermark.position}
+            />
+          )}
+        </div>
       );
     }
 
@@ -202,12 +291,12 @@ export default function CourseViewer() {
       );
     }
 
-    if (['jpg', 'jpeg', 'png', 'gif'].includes(fileExt)) {
+    if (['jpg', 'jpeg', 'png', 'gif'].includes(fileExt || '')) {
       return (
         <div className="w-full rounded-lg border p-4 bg-muted">
-          <img 
-            src={contentUrl} 
-            alt={currentLesson.title} 
+          <img
+            src={contentUrl}
+            alt={currentLesson.title}
             className="w-full rounded-lg"
             onContextMenu={(e) => e.preventDefault()}
             style={{ userSelect: 'none', pointerEvents: 'none' }}
@@ -216,7 +305,7 @@ export default function CourseViewer() {
       );
     }
 
-    if (['mp3', 'wav'].includes(fileExt)) {
+    if (['mp3', 'wav'].includes(fileExt || '')) {
       return (
         <audio controls controlsList="nodownload" className="w-full">
           <source src={contentUrl} type={`audio/${fileExt}`} />
@@ -281,6 +370,7 @@ export default function CourseViewer() {
         </Button>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Content Area */}
           <div className="lg:col-span-2">
             <Card className="shadow-soft">
               <CardHeader>
@@ -288,23 +378,14 @@ export default function CourseViewer() {
                 <CardDescription>{course?.category}</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="relative overflow-hidden">
-                  {renderContent()}
-                  {showWatermark && creatorName && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-10">
-                      <p className="text-8xl font-bold text-white/20 dark:text-white/15 rotate-[-45deg] whitespace-nowrap drop-shadow-lg">
-                        {creatorName}
-                      </p>
-                    </div>
-                  )}
-                </div>
+                {renderContent()}
                 <div className="mt-4 flex justify-end">
                   <Button
                     onClick={handleMarkComplete}
-                    disabled={completedLessons.has(currentLesson?.id)}
+                    disabled={completedLessons.has(currentLesson?.id || '')}
                     className="gap-2"
                   >
-                    {completedLessons.has(currentLesson?.id) ? (
+                    {completedLessons.has(currentLesson?.id || '') ? (
                       <>
                         <CheckCircle2 className="h-4 w-4" />
                         Completed
@@ -319,42 +400,94 @@ export default function CourseViewer() {
                 </div>
               </CardContent>
             </Card>
+
+            {currentLesson && (
+              <div className="mb-8 p-6 bg-card rounded-xl shadow-soft mt-6">
+                <h1 className="text-2xl font-bold mb-2">{currentLesson.title}</h1>
+                {currentLesson.description && (
+                  <p className="text-muted-foreground">{currentLesson.description}</p>
+                )}
+
+                {/* Lesson Comments Section via Tab or Direct */}
+                <LessonComments lessonId={currentLesson.id} />
+              </div>
+            )}
+
+            {/* Course Tabs: Overview, Discussions */}
+            <Tabs defaultValue="overview" className="w-full mt-6">
+              <TabsList>
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="community">Community</TabsTrigger>
+              </TabsList>
+              <TabsContent value="overview" className="mt-6">
+                <div className="prose dark:prose-invert max-w-none">
+                  <h3 className="text-xl font-bold mb-4">About this Course</h3>
+                  <p>{course.description}</p>
+                </div>
+              </TabsContent>
+              <TabsContent value="community" className="mt-6">
+                <DiscussionBoard courseId={course.id} />
+              </TabsContent>
+            </Tabs>
           </div>
 
           <div>
-            <Card className="shadow-soft">
+            <Card className="shadow-soft h-full max-h-[800px] flex flex-col">
               <CardHeader>
                 <CardTitle>Course Content</CardTitle>
-                <CardDescription>{lessons.length} lessons</CardDescription>
+                <CardDescription>
+                  {modules.reduce((acc, m) => acc + m.lessons.length, 0)} lessons
+                </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex-1 overflow-y-auto px-2">
                 <div className="space-y-2">
-                  {lessons.map((lesson, index) => (
-                    <button
-                      key={lesson.id}
-                      onClick={() => setCurrentLesson(lesson)}
-                      className={`w-full text-left p-3 rounded-lg transition-colors ${
-                        currentLesson?.id === lesson.id
-                          ? 'bg-primary text-primary-foreground'
-                          : 'hover:bg-muted'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        {completedLessons.has(lesson.id) ? (
-                          <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-green-500" />
+                  {modules.map((module, index) => (
+                    <div key={module.id} className="border rounded-lg overflow-hidden">
+                      <button
+                        onClick={() => toggleModule(module.id)}
+                        className="w-full flex items-center justify-between p-3 bg-muted/50 hover:bg-muted transition-colors text-left"
+                      >
+                        <span className="font-medium text-sm flex-1">{module.title}</span>
+                        {expandedModules.has(module.id) ? (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
                         ) : (
-                          <PlayCircle className="h-4 w-4 flex-shrink-0" />
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
                         )}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">
-                            {index + 1}. {lesson.title}
-                          </p>
-                          <p className="text-xs opacity-80">
-                            {lesson.content_url?.split('.').pop()?.toUpperCase()}
-                          </p>
+                      </button>
+
+                      {expandedModules.has(module.id) && (
+                        <div className="bg-card divide-y">
+                          {module.lessons.length === 0 ? (
+                            <div className="p-3 text-xs text-muted-foreground text-center">No lessons</div>
+                          ) : (
+                            module.lessons.map((lesson, lessonIndex) => (
+                              <button
+                                key={lesson.id}
+                                onClick={() => setCurrentLesson(lesson)}
+                                className={`w-full text-left p-3 pl-4 transition-colors flex items-start gap-3 ${currentLesson?.id === lesson.id
+                                  ? 'bg-primary/10 text-primary border-l-2 border-l-primary'
+                                  : 'hover:bg-muted/50 border-l-2 border-l-transparent'
+                                  }`}
+                              >
+                                {completedLessons.has(lesson.id) ? (
+                                  <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-green-500 mt-1" />
+                                ) : (
+                                  <PlayCircle className="h-4 w-4 flex-shrink-0 mt-1" />
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium leading-none mb-1">
+                                    {lesson.title}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground opacity-80">
+                                    {lesson.content_type || 'Lesson'}
+                                  </p>
+                                </div>
+                              </button>
+                            ))
+                          )}
                         </div>
-                      </div>
-                    </button>
+                      )}
+                    </div>
                   ))}
                 </div>
               </CardContent>

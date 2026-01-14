@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Search } from "lucide-react";
 
+import { SEO } from "@/components/SEO";
+
+
 export default function Explore() {
   const [creators, setCreators] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -20,7 +23,8 @@ export default function Explore() {
   const fetchCreators = async () => {
     const { data, error } = await supabase
       .from("public_profiles")
-      .select("*");
+      .select("*")
+      .eq("role", "creator");
 
     if (error) {
       console.error("Error fetching creators:", error);
@@ -37,6 +41,7 @@ export default function Explore() {
 
   return (
     <div className="min-h-screen">
+      <SEO title="Explore Creators" description="Discover and learn from the best creators in the world." />
       <Navbar />
 
       <div className="pt-32 pb-20 px-4">

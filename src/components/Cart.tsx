@@ -14,8 +14,8 @@ export const Cart = () => {
         <Button variant="ghost" size="icon" className="relative">
           <ShoppingCart className="h-5 w-5" />
           {totalItems > 0 && (
-            <Badge 
-              variant="destructive" 
+            <Badge
+              variant="destructive"
               className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
             >
               {totalItems}
@@ -27,7 +27,7 @@ export const Cart = () => {
         <SheetHeader>
           <SheetTitle>Shopping Cart ({totalItems} items)</SheetTitle>
         </SheetHeader>
-        
+
         <div className="mt-8 flex flex-col h-full">
           {items.length === 0 ? (
             <div className="flex-1 flex items-center justify-center">
@@ -50,7 +50,7 @@ export const Cart = () => {
                         ${item.price}
                       </p>
                     </div>
-                    
+
                     <div className="flex flex-col items-end justify-between">
                       <Button
                         variant="ghost"
@@ -60,7 +60,7 @@ export const Cart = () => {
                       >
                         <X className="h-4 w-4" />
                       </Button>
-                      
+
                       <div className="flex items-center gap-2">
                         <Button
                           variant="outline"
@@ -84,13 +84,13 @@ export const Cart = () => {
                   </div>
                 ))}
               </div>
-              
+
               <div className="border-t pt-4 mt-4 space-y-4">
                 <div className="flex justify-between items-center text-lg font-bold">
                   <span>Total:</span>
                   <span className="text-primary">${getTotalPrice().toFixed(2)}</span>
                 </div>
-                <Button className="w-full" size="lg">
+                <Button className="w-full" size="lg" onClick={() => document.getElementById("cart-close")?.click() || (window.location.href = "/checkout")}>
                   Proceed to Checkout
                 </Button>
               </div>
