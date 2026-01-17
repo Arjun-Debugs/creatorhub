@@ -1,6 +1,14 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from '@supabase/supabase-js';
 
+// Declare Deno global for TypeScript
+declare const Deno: {
+    serve: (handler: (request: Request) => Response | Promise<Response>) => void;
+    env: {
+        get: (key: string) => string | undefined;
+    };
+};
+
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',

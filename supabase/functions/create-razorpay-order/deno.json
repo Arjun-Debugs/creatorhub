@@ -4,7 +4,8 @@
     },
     "compilerOptions": {
         "lib": [
-            "deno.window"
+            "deno.ns",
+            "deno.unstable"
         ],
         "types": [
             "jsr:@supabase/functions-js/edge-runtime.d.ts"
