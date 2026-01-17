@@ -81,6 +81,7 @@ export default function Checkout() {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${session?.access_token}`,
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
           },
           body: JSON.stringify({ items }),
         }
@@ -115,6 +116,7 @@ export default function Checkout() {
                 headers: {
                   'Content-Type': 'application/json',
                   'Authorization': `Bearer ${session?.access_token}`,
+                  'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
                 },
                 body: JSON.stringify({
                   razorpay_order_id: response.razorpay_order_id,
