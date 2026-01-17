@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getSecureVideoUrl, getSignedUrl, checkContentAccess } from '@/integrations/supabase/storage';
 
 interface SecureContentOptions {
@@ -43,7 +43,7 @@ export function useSecureContent(
     const [error, setError] = useState<string | null>(null);
     const [hasAccess, setHasAccess] = useState(false);
 
-    const fetchSecureUrl = async () => {
+    const fetchSecureUrl = useCallback(async () => {
         if (!path) {
             setLoading(false);
             return;
@@ -87,12 +87,12 @@ export function useSecureContent(
         } finally {
             setLoading(false);
         }
-    };
+    }, [path, courseId, bucket]);
 
     // Initial fetch
     useEffect(() => {
         fetchSecureUrl();
-    }, [path, courseId, bucket]);
+    }, [fetchSecureUrl]);
 
     // Auto-refresh signed URLs before they expire
     useEffect(() => {
@@ -104,7 +104,7 @@ export function useSecureContent(
         }, refreshInterval);
 
         return () => clearInterval(intervalId);
-    }, [autoRefresh, url, refreshInterval]);
+    }, [autoRefresh, url, refreshInterval, fetchSecureUrl]);
 
     return {
         url,
@@ -134,6 +134,8 @@ export function useSecureContentBatch(
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    const joinedPaths = paths.join(',');
+
     useEffect(() => {
         const fetchUrls = async () => {
             try {
@@ -158,7 +160,7 @@ export function useSecureContentBatch(
         } else {
             setLoading(false);
         }
-    }, [paths.join(','), bucket]);
+    }, [joinedPaths, bucket, paths]);
 
     return { urls, loading, error };
 }

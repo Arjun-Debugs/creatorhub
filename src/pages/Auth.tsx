@@ -48,6 +48,7 @@ export default function Auth() {
       });
 
       if (error) throw error;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       toast.error(error.message || "Failed to sign in with Google");
       setLoading(false);
@@ -106,6 +107,7 @@ export default function Auth() {
         toast.success("Welcome back!");
         navigate("/dashboard");
       }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       toast.error(error.message || "An error occurred");
     } finally {

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Session } from "@supabase/supabase-js";
 import { ThemeToggle } from "./ThemeToggle";
 import { Cart } from "./Cart";
+import NotificationBell from "./ui/NotificationBell";
 
 export const Navbar = () => {
   const navigate = useNavigate();
@@ -40,9 +41,10 @@ export const Navbar = () => {
 
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            <Cart />
             {session ? (
               <>
+                <Cart />
+                <NotificationBell />
                 <Link to="/explore">
                   <Button variant="ghost">Explore</Button>
                 </Link>
@@ -59,9 +61,6 @@ export const Navbar = () => {
               </>
             ) : (
               <>
-                <Link to="/explore">
-                  <Button variant="ghost">Explore</Button>
-                </Link>
                 <Link to="/auth">
                   <Button variant="outline">Sign In</Button>
                 </Link>

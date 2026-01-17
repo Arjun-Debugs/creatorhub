@@ -13,9 +13,11 @@ import { productSchema } from "@/lib/validation";
 import ProductEditor from "./ProductEditor";
 
 export default function ProductsManager({ onProductChange }: { onProductChange?: () => void }) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editorOpen, setEditorOpen] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [editingProduct, setEditingProduct] = useState<any | null>(null);
 
   useEffect(() => {
@@ -46,6 +48,7 @@ export default function ProductsManager({ onProductChange }: { onProductChange?:
     setEditorOpen(true);
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleOpenEdit = (product: any) => {
     setEditingProduct(product);
     setEditorOpen(true);

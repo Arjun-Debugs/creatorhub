@@ -15,6 +15,7 @@ import { sendOrderConfirmationEmail, sendEnrollmentEmail } from "@/lib/email";
 
 declare global {
   interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     Razorpay: any;
   }
 }
@@ -56,59 +57,89 @@ export default function Checkout() {
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const { data: { user } } = await supabase.auth.getUser();
-    
+
     if (!user) {
       toast.error("Please sign in to complete purchase");
       navigate("/auth");
       return;
     }
 
-    if (!import.meta.env.VITE_RAZORPAY_KEY_ID || import.meta.env.VITE_RAZORPAY_KEY_ID === 'rzp_test_your_key_id_here') {
-      toast.error("Payment gateway not configured. Please add Razorpay API keys to .env file.");
-      return;
-    }
+
 
     setProcessing(true);
 
     try {
-      const totalAmount = getTotalPrice();
-      const amountInPaise = Math.round(totalAmount * 100); // Razorpay expects amount in paise
+      // Step 1: Create Razorpay order via Edge Function
+      const { data: { session } } = await supabase.auth.getSession();
 
+      const orderResponse = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-razorpay-order`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({ items }),
+        }
+      );
+
+      if (!orderResponse.ok) {
+        const errorData = await orderResponse.json();
+        throw new Error(errorData.error || 'Failed to create order');
+      }
+
+      const orderData = await orderResponse.json();
+
+      // Step 2: Open Razorpay checkout with order_id
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-        amount: amountInPaise,
-        currency: 'INR',
+        key: orderData.key_id,
+        amount: orderData.amount,
+        currency: orderData.currency,
         name: 'CreatorHub',
         description: `Purchase of ${items.length} course(s)`,
-        image: '/logo.png', // Add your logo
+        image: '/logo.png',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        order_id: orderData.razorpay_order_id,
         handler: async function (response: any) {
-          // Payment successful
-          console.log('Payment successful:', response);
-          
+          // Step 3: Verify payment signature via Edge Function
+          console.log('Payment successful, verifying signature...');
+
           try {
-            // Process each item in the cart
-            for (const item of items) {
-              const { data: orderData, error: orderError } = await supabase.rpc('process_mock_order', {
-                p_course_id: item.id,
-                p_user_id: user.id,
-                p_amount: item.price
-              });
-
-              if (orderError) {
-                console.error("Order processing failed:", orderError);
-                continue;
+            const verifyResponse = await fetch(
+              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-payment`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${session?.access_token}`,
+                },
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  payment_method: response.method || null,
+                }),
               }
+            );
 
-              // Send confirmation email
-              if (import.meta.env.VITE_RESEND_API_KEY && import.meta.env.VITE_RESEND_API_KEY !== 're_your_api_key_here') {
+            const verifyData = await verifyResponse.json();
+
+            if (!verifyResponse.ok || !verifyData.verified) {
+              throw new Error('Payment verification failed');
+            }
+
+            // Send confirmation emails
+            if (import.meta.env.VITE_RESEND_API_KEY && import.meta.env.VITE_RESEND_API_KEY !== 're_your_api_key_here') {
+              for (const item of items) {
                 await sendOrderConfirmationEmail({
                   to: userEmail,
                   userName: userName,
                   courseName: item.name,
                   orderAmount: item.price,
-                  orderId: orderData || 'N/A'
+                  orderId: response.razorpay_payment_id
                 });
 
                 await sendEnrollmentEmail({
@@ -124,8 +155,9 @@ export default function Checkout() {
             clearCart();
             navigate("/dashboard");
           } catch (error) {
-            console.error("Post-payment processing error:", error);
-            toast.error("Payment successful but order processing failed. Please contact support.");
+            console.error("Payment verification error:", error);
+            toast.error("Payment verification failed. Please contact support with payment ID: " + response.razorpay_payment_id);
+            setProcessing(false);
           }
         },
         prefill: {
@@ -136,7 +168,7 @@ export default function Checkout() {
           color: '#667eea'
         },
         modal: {
-          ondismiss: function() {
+          ondismiss: function () {
             setProcessing(false);
             toast.info("Payment cancelled");
           }
@@ -147,7 +179,7 @@ export default function Checkout() {
       razorpay.open();
     } catch (error) {
       console.error("Checkout error:", error);
-      toast.error("Failed to initialize payment");
+      toast.error(error instanceof Error ? error.message : "Failed to initialize payment");
       setProcessing(false);
     }
   };
@@ -157,10 +189,10 @@ export default function Checkout() {
       <div className="min-h-screen flex flex-col">
         <Navbar />
         <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-                <h2 className="text-2xl font-bold mb-4">Your cart is empty</h2>
-                <Button onClick={() => navigate("/explore")}>Browse Courses</Button>
-            </div>
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-4">Your cart is empty</h2>
+            <Button onClick={() => navigate("/explore")}>Browse Courses</Button>
+          </div>
         </div>
         <Footer />
       </div>
@@ -172,7 +204,7 @@ export default function Checkout() {
       <Navbar />
       <div className="container mx-auto px-4 py-24">
         <h1 className="text-3xl font-bold mb-8">Checkout</h1>
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Billing Form */}
           <div className="space-y-6">
@@ -185,35 +217,35 @@ export default function Checkout() {
                 <form onSubmit={handlePayment} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Name</Label>
-                    <Input 
-                      id="name" 
-                      value={userName} 
+                    <Input
+                      id="name"
+                      value={userName}
                       onChange={(e) => setUserName(e.target.value)}
-                      required 
+                      required
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input 
-                      id="email" 
-                      type="email" 
+                    <Input
+                      id="email"
+                      type="email"
                       value={userEmail}
                       onChange={(e) => setUserEmail(e.target.value)}
-                      required 
+                      required
                     />
                   </div>
 
                   <Separator className="my-4" />
-                  
+
                   <div className="space-y-2">
                     <Label>Payment Method</Label>
                     <div className="flex gap-2 p-4 border rounded-lg bg-muted/50 items-center">
-                        <CreditCard className="h-5 w-5" />
-                        <span className="font-medium">Razorpay</span>
-                        <div className="ml-auto text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                            Secure
-                        </div>
+                      <CreditCard className="h-5 w-5" />
+                      <span className="font-medium">Razorpay</span>
+                      <div className="ml-auto text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                        Secure
+                      </div>
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Supports UPI, Cards, Net Banking, and Wallets
@@ -222,12 +254,12 @@ export default function Checkout() {
 
                   <Button type="submit" className="w-full mt-4" size="lg" disabled={processing}>
                     {processing ? (
-                        <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Processing...
-                        </>
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
                     ) : (
-                        `Pay ₹${getTotalPrice().toFixed(2)}`
+                      `Pay ₹${getTotalPrice().toFixed(2)}`
                     )}
                   </Button>
                 </form>
@@ -238,35 +270,35 @@ export default function Checkout() {
           {/* Order Summary */}
           <div>
             <Card className="shadow-soft lg:sticky lg:top-24">
-                <CardHeader>
-                    <CardTitle>Order Summary</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {items.map((item) => (
-                        <div key={item.id} className="flex justify-between items-start">
-                            <div>
-                                <p className="font-medium">{item.name}</p>
-                                <p className="text-sm text-muted-foreground line-clamp-1">{item.description}</p>
-                            </div>
-                            <p className="font-semibold">₹{item.price}</p>
-                        </div>
-                    ))}
-                    
-                    <Separator />
-                    
-                    <div className="flex justify-between items-center text-lg font-bold">
-                        <span>Total</span>
-                        <span>₹{getTotalPrice().toFixed(2)}</span>
+              <CardHeader>
+                <CardTitle>Order Summary</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {items.map((item) => (
+                  <div key={item.id} className="flex justify-between items-start">
+                    <div>
+                      <p className="font-medium">{item.name}</p>
+                      <p className="text-sm text-muted-foreground line-clamp-1">{item.description}</p>
                     </div>
+                    <p className="font-semibold">₹{item.price}</p>
+                  </div>
+                ))}
 
-                    <div className="bg-secondary/10 p-4 rounded-lg flex items-start gap-3 mt-4">
-                        <CheckCircle className="h-5 w-5 text-secondary shrink-0 mt-0.5" />
-                        <div className="text-sm">
-                            <p className="font-medium text-secondary-foreground">Secure Checkout</p>
-                            <p className="text-muted-foreground">Powered by Razorpay. Your payment information is encrypted and secure.</p>
-                        </div>
-                    </div>
-                </CardContent>
+                <Separator />
+
+                <div className="flex justify-between items-center text-lg font-bold">
+                  <span>Total</span>
+                  <span>₹{getTotalPrice().toFixed(2)}</span>
+                </div>
+
+                <div className="bg-secondary/10 p-4 rounded-lg flex items-start gap-3 mt-4">
+                  <CheckCircle className="h-5 w-5 text-secondary shrink-0 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium text-secondary-foreground">Secure Checkout</p>
+                    <p className="text-muted-foreground">Powered by Razorpay. Your payment information is encrypted and secure.</p>
+                  </div>
+                </div>
+              </CardContent>
             </Card>
           </div>
         </div>

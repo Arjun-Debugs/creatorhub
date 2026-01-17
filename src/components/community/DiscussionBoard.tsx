@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -43,6 +43,35 @@ export default function DiscussionBoard({ courseId }: { courseId: string }) {
     const [newReply, setNewReply] = useState("");
     const [loading, setLoading] = useState(true);
 
+    const fetchDiscussions = useCallback(async () => {
+        const { data, error } = await supabase
+            .from("discussions")
+            .select("*, profiles(name, avatar_url)")
+            .eq("course_id", courseId)
+            .order("created_at", { ascending: false });
+
+        if (error) {
+            console.error("Error fetching discussions:", error);
+        } else {
+            setDiscussions(data || []);
+        }
+        setLoading(false);
+    }, [courseId]);
+
+    const fetchReplies = useCallback(async (discussionId: string) => {
+        const { data, error } = await supabase
+            .from("discussion_replies")
+            .select("*, profiles(name, avatar_url)")
+            .eq("discussion_id", discussionId)
+            .order("created_at", { ascending: true });
+
+        if (error) {
+            console.error("Error fetching replies:", error);
+        } else {
+            setReplies(data || []);
+        }
+    }, []); // fetchReplies only depends on supabase and arguments
+
     useEffect(() => {
         fetchDiscussions();
 
@@ -62,7 +91,7 @@ export default function DiscussionBoard({ courseId }: { courseId: string }) {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [courseId]);
+    }, [courseId, fetchDiscussions]);
 
     useEffect(() => {
         if (activeDiscussion) {
@@ -85,36 +114,7 @@ export default function DiscussionBoard({ courseId }: { courseId: string }) {
                 supabase.removeChannel(channel);
             };
         }
-    }, [activeDiscussion]);
-
-    const fetchDiscussions = async () => {
-        const { data, error } = await supabase
-            .from("discussions")
-            .select("*, profiles(name, avatar_url)")
-            .eq("course_id", courseId)
-            .order("created_at", { ascending: false });
-
-        if (error) {
-            console.error("Error fetching discussions:", error);
-        } else {
-            setDiscussions(data || []);
-        }
-        setLoading(false);
-    };
-
-    const fetchReplies = async (discussionId: string) => {
-        const { data, error } = await supabase
-            .from("discussion_replies")
-            .select("*, profiles(name, avatar_url)")
-            .eq("discussion_id", discussionId)
-            .order("created_at", { ascending: true });
-
-        if (error) {
-            console.error("Error fetching replies:", error);
-        } else {
-            setReplies(data || []);
-        }
-    };
+    }, [activeDiscussion, fetchReplies]);
 
     const handleCreateDiscussion = async () => {
         if (!newTitle.trim() || !newContent.trim()) return;

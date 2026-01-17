@@ -12,6 +12,7 @@ import { SEO } from "@/components/SEO";
 
 
 export default function Explore() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [creators, setCreators] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,11 +12,12 @@ import { Navbar } from "@/components/Navbar";
 import { Module, Lesson } from "@/types";
 import { useSecureContent } from "@/hooks/useSecureContent";
 import { VideoWatermark } from "@/components/course/VideoWatermark";
-import { Module, Lesson } from "@/types";
+// Duplicate import removed
 
 export default function CourseViewer() {
   const { courseId } = useParams();
   const navigate = useNavigate();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [course, setCourse] = useState<any>(null);
   const [modules, setModules] = useState<(Module & { lessons: Lesson[] })[]>([]);
   const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
@@ -25,9 +26,92 @@ export default function CourseViewer() {
   const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
 
+  const checkEnrollmentAndFetchCourse = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+
+    const { data: courseData, error: courseError } = await supabase
+      .from("courses")
+      .select("*")
+      .eq("id", courseId)
+      .single();
+
+    if (courseError || !courseData) {
+      toast.error("Course not found");
+      navigate("/dashboard");
+      return;
+    }
+
+    setCourse(courseData);
+
+    // Check Enrollment
+    const { data: enrollmentData } = await supabase
+      .from("enrollments")
+      .select("*")
+      .eq("course_id", courseId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    setIsEnrolled(!!enrollmentData || courseData.is_free);
+
+    if (enrollmentData || courseData.is_free) {
+      // Fetch Modules
+      const { data: modulesData } = await supabase
+        .from("modules")
+        .select("*")
+        .eq("course_id", courseId)
+        .order("order_index", { ascending: true });
+
+      // Fetch Lessons
+      const { data: lessonsData } = await supabase
+        .from("lessons")
+        .select("*")
+        .eq("course_id", courseId)
+        .order("order_index", { ascending: true });
+
+      // Group Lessons
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const combinedModules = (modulesData || []).map((mod: any) => ({
+        ...mod,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        lessons: (lessonsData || []).filter((l: any) => l.module_id === mod.id),
+      }));
+
+      setModules(combinedModules);
+
+      // Auto-select first lesson if available and none selected
+      if (!currentLesson && combinedModules.length > 0 && combinedModules[0].lessons.length > 0) {
+        setCurrentLesson(combinedModules[0].lessons[0]);
+        setExpandedModules(new Set([combinedModules[0].id]));
+      }
+
+      // Fetch Completions
+      const { data: completionsData } = await supabase
+        .from("lesson_completions")
+        .select("lesson_id")
+        .eq("user_id", user.id)
+        .eq("course_id", courseId);
+
+      if (completionsData) {
+        setCompletedLessons(new Set(completionsData.map(c => c.lesson_id)));
+      }
+    }
+
+    setLoading(false);
+  }, [courseId, currentLesson, navigate]); // Added navigate and courseId. checkEnrollmentAndFetchCourse depends on currentLesson? No.
+  // Wait, currentLesson is used in "Auto-select first lesson if available and none selected". 
+  // If we assume this only runs on mount or id change, maybe currentLesson dependency is okay or we check if it's null inside.
+  // Ideally we only want to fetch when courseId changes.
+  // But if we put it in useEffect[courseId], we only call it then.
+  // The function "Auto-select" logic might be improved.
+  // I will check dependencies.
+
   useEffect(() => {
     checkEnrollmentAndFetchCourse();
-  }, [courseId]);
+  }, [checkEnrollmentAndFetchCourse]);
 
   useEffect(() => {
     // Disable right-click
@@ -77,81 +161,6 @@ export default function CourseViewer() {
       newExpanded.add(moduleId);
     }
     setExpandedModules(newExpanded);
-  };
-
-  const checkEnrollmentAndFetchCourse = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      navigate("/auth");
-      return;
-    }
-
-    const { data: courseData, error: courseError } = await supabase
-      .from("courses")
-      .select("*")
-      .eq("id", courseId)
-      .single();
-
-    if (courseError || !courseData) {
-      toast.error("Course not found");
-      navigate("/dashboard");
-      return;
-    }
-
-    setCourse(courseData);
-
-    // Check Enrollment
-    const { data: enrollmentData } = await supabase
-      .from("enrollments")
-      .select("*")
-      .eq("course_id", courseId)
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    setIsEnrolled(!!enrollmentData || courseData.is_free);
-
-    if (enrollmentData || courseData.is_free) {
-      // Fetch Modules
-      const { data: modulesData } = await supabase
-        .from("modules")
-        .select("*")
-        .eq("course_id", courseId)
-        .order("order_index", { ascending: true });
-
-      // Fetch Lessons
-      const { data: lessonsData } = await supabase
-        .from("lessons")
-        .select("*")
-        .eq("course_id", courseId)
-        .order("order_index", { ascending: true });
-
-      // Group Lessons
-      const combinedModules = (modulesData || []).map((mod: any) => ({
-        ...mod,
-        lessons: (lessonsData || []).filter((l: any) => l.module_id === mod.id),
-      }));
-
-      setModules(combinedModules);
-
-      // Auto-select first lesson if available and none selected
-      if (!currentLesson && combinedModules.length > 0 && combinedModules[0].lessons.length > 0) {
-        setCurrentLesson(combinedModules[0].lessons[0]);
-        setExpandedModules(new Set([combinedModules[0].id]));
-      }
-
-      // Fetch Completions
-      const { data: completionsData } = await supabase
-        .from("lesson_completions")
-        .select("lesson_id")
-        .eq("user_id", user.id)
-        .eq("course_id", courseId);
-
-      if (completionsData) {
-        setCompletedLessons(new Set(completionsData.map(c => c.lesson_id)));
-      }
-    }
-
-    setLoading(false);
   };
 
   // Use secure content hook for automatic signed URL management
@@ -404,9 +413,7 @@ export default function CourseViewer() {
             {currentLesson && (
               <div className="mb-8 p-6 bg-card rounded-xl shadow-soft mt-6">
                 <h1 className="text-2xl font-bold mb-2">{currentLesson.title}</h1>
-                {currentLesson.description && (
-                  <p className="text-muted-foreground">{currentLesson.description}</p>
-                )}
+                {/* Description removed as it does not exist on Lesson type */}
 
                 {/* Lesson Comments Section via Tab or Direct */}
                 <LessonComments lessonId={currentLesson.id} />

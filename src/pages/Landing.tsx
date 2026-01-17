@@ -44,11 +44,6 @@ export default function Landing() {
                   Join as Creator
                 </Button>
               </Link>
-              <Link to="/explore">
-                <Button size="lg" variant="outline" className="text-lg px-8 h-14 rounded-full glass hover:bg-white/20">
-                  Explore Creators
-                </Button>
-              </Link>
             </div>
           </div>
         </div>
@@ -128,11 +123,6 @@ export default function Landing() {
                     {creator.tag}
                   </div>
                   <h3 className="text-xl font-bold mb-2">{creator.name}</h3>
-                  <Link to="/explore">
-                    <Button variant="ghost" className="mt-2 p-0 h-auto hover:text-primary">
-                      View Storefront →
-                    </Button>
-                  </Link>
                 </CardContent>
               </Card>
             ))}

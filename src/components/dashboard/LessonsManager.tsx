@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,23 +6,19 @@ import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 import ModuleManager from "./ModuleManager";
 import LessonEditor from "./LessonEditor";
-import { Module, Lesson } from "@/types";
+import { Module, Lesson, Course } from "@/types";
 
 export default function LessonsManager() {
   const { courseId } = useParams();
   const navigate = useNavigate();
-  const [course, setCourse] = useState<any>(null);
+  const [course, setCourse] = useState<Course | null>(null);
   const [modules, setModules] = useState<(Module & { lessons: Lesson[] })[]>([]);
   const [loading, setLoading] = useState(true);
   const [editorOpen, setEditorOpen] = useState(false);
   const [activeModuleId, setActiveModuleId] = useState<string | null>(null);
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
 
-  useEffect(() => {
-    fetchCourseAndContent();
-  }, [courseId]);
-
-  const fetchCourseAndContent = async () => {
+  const fetchCourseAndContent = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
@@ -39,7 +35,7 @@ export default function LessonsManager() {
       navigate("/dashboard");
       return;
     }
-    setCourse(courseData);
+    setCourse(courseData as unknown as Course);
 
     // Fetch Modules
     const { data: modulesData, error: modulesError } = await supabase
@@ -66,14 +62,18 @@ export default function LessonsManager() {
     }
 
     // Group Lessons by Module
-    const combinedModules = (modulesData || []).map((mod: any) => ({
+    const combinedModules = (modulesData || []).map((mod) => ({
       ...mod,
-      lessons: (lessonsData || []).filter((l: any) => l.module_id === mod.id),
+      lessons: (lessonsData || []).filter((l) => l.module_id === mod.id) as Lesson[],
     }));
 
-    setModules(combinedModules);
+    setModules(combinedModules as (Module & { lessons: Lesson[] })[]);
     setLoading(false);
-  };
+  }, [courseId, navigate]);
+
+  useEffect(() => {
+    fetchCourseAndContent();
+  }, [fetchCourseAndContent]);
 
   const handleOpenAddLesson = (moduleId: string) => {
     setActiveModuleId(moduleId);

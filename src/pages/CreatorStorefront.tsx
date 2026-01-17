@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -14,19 +14,17 @@ export default function CreatorStorefront() {
   const { creatorId } = useParams();
   const navigate = useNavigate();
   const { addItem } = useCart();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [creator, setCreator] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [courses, setCourses] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (creatorId) {
-      fetchCreatorData();
-    }
-  }, [creatorId]);
 
-  const fetchCreatorData = async () => {
+  const fetchCreatorData = useCallback(async () => {
     const [creatorResult, coursesResult, productsResult] = await Promise.all([
       supabase.from("public_profiles").select("*").eq("id", creatorId).single(),
       supabase.from("courses").select("*").eq("creator_id", creatorId).eq("status", "published"),
@@ -38,11 +36,19 @@ export default function CreatorStorefront() {
     if (productsResult.data) setProducts(productsResult.data);
 
     setLoading(false);
-  };
+  }, [creatorId]);
 
+
+  useEffect(() => {
+    if (creatorId) {
+      fetchCreatorData();
+    }
+  }, [creatorId, fetchCreatorData]);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleEnroll = async (course: any) => {
     const { data: { user } } = await supabase.auth.getUser();
-    
+
     if (!user) {
       toast.error("Please sign in to enroll");
       navigate("/auth");
@@ -212,7 +218,7 @@ export default function CreatorStorefront() {
                           ) : (
                             <span className="text-2xl font-bold text-primary">${course.price}</span>
                           )}
-                          <Button 
+                          <Button
                             onClick={() => handleEnroll(course)}
                             disabled={enrolling === course.id}
                           >
@@ -250,8 +256,8 @@ export default function CreatorStorefront() {
                             {product.type}
                           </span>
                         </div>
-                        <Button 
-                          variant="secondary" 
+                        <Button
+                          variant="secondary"
                           className="w-full"
                           onClick={() => addItem({
                             id: product.id,

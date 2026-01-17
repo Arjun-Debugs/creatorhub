@@ -12,13 +12,15 @@ import { Plus, Edit, Trash2, BookOpen } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { courseSchema } from "@/lib/validation";
 
+import { Course } from "@/types";
+
 export default function CoursesManager({ onCourseChange }: { onCourseChange?: () => void }) {
   const navigate = useNavigate();
-  const [courses, setCourses] = useState<any[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [courseLearners, setCourseLearners] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingCourse, setEditingCourse] = useState<any>(null);
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -46,8 +48,9 @@ export default function CoursesManager({ onCourseChange }: { onCourseChange?: ()
       toast.error("Error fetching courses");
       console.error(error);
     } else {
-      setCourses(data || []);
-      
+      // Cast the data to Course[] as Supabase returns strings for enum fields
+      setCourses((data || []) as unknown as Course[]);
+
       // Fetch learner counts for each course
       if (data && data.length > 0) {
         const courseIds = data.map(c => c.id);
@@ -137,12 +140,12 @@ export default function CoursesManager({ onCourseChange }: { onCourseChange?: ()
     }
   };
 
-  const handleEdit = (course: any) => {
+  const handleEdit = (course: Course) => {
     setEditingCourse(course);
     setFormData({
       title: course.title,
       description: course.description || "",
-      price: course.price.toString(),
+      price: (course.price || 0).toString(), // Default to 0 if undefined
       category: course.category || "",
       status: course.status,
       is_free: course.is_free,
@@ -268,63 +271,64 @@ export default function CoursesManager({ onCourseChange }: { onCourseChange?: ()
         </Dialog>
       </div>
 
-      {courses.length === 0 ? (
-        <Card className="shadow-soft">
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground mb-4">You haven't created any courses yet.</p>
-            <Button onClick={() => setDialogOpen(true)}>Create Your First Course</Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {courses.map((course) => (
-            <Card key={course.id} className="shadow-soft hover:shadow-hover transition-all">
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle>{course.title}</CardTitle>
-                    <CardDescription className="mt-2">{course.category}</CardDescription>
+      {
+        courses.length === 0 ? (
+          <Card className="shadow-soft">
+            <CardContent className="py-12 text-center">
+              <p className="text-muted-foreground mb-4">You haven't created any courses yet.</p>
+              <Button onClick={() => setDialogOpen(true)}>Create Your First Course</Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {courses.map((course) => (
+              <Card key={course.id} className="shadow-soft hover:shadow-hover transition-all">
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle>{course.title}</CardTitle>
+                      <CardDescription className="mt-2">{course.category}</CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="icon" onClick={() => navigate(`/course/${course.id}/lessons`)}>
+                        <BookOpen className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleEdit(course)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(course.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => navigate(`/course/${course.id}/lessons`)}>
-                      <BookOpen className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleEdit(course)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(course.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">{course.description}</p>
-                <div className="flex justify-between items-center mb-2">
-                  <div className="flex gap-2 items-center">
-                    <span className="text-lg font-bold text-primary">
-                      {course.is_free ? "FREE" : `$${course.price}`}
-                    </span>
-                    {course.is_free && (
-                      <span className="px-2 py-1 rounded-full text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100">
-                        Free Access
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4">{course.description}</p>
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="flex gap-2 items-center">
+                      <span className="text-lg font-bold text-primary">
+                        {course.is_free ? "FREE" : `$${course.price}`}
                       </span>
-                    )}
+                      {course.is_free && (
+                        <span className="px-2 py-1 rounded-full text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100">
+                          Free Access
+                        </span>
+                      )}
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-xs ${course.status === "published" ? "bg-secondary text-secondary-foreground" : "bg-muted"
+                      }`}>
+                      {course.status}
+                    </span>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs ${
-                    course.status === "published" ? "bg-secondary text-secondary-foreground" : "bg-muted"
-                  }`}>
-                    {course.status}
-                  </span>
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  👥 {courseLearners[course.id] || 0} learner{(courseLearners[course.id] || 0) !== 1 ? 's' : ''} enrolled
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
+                  <div className="text-sm text-muted-foreground">
+                    👥 {courseLearners[course.id] || 0} learner{(courseLearners[course.id] || 0) !== 1 ? 's' : ''} enrolled
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )
+      }
+    </div >
   );
 }

@@ -1,0 +1,45 @@
+
+> vite_react_shadcn_ts@0.0.0 build
+> vite build
+
+[36mvite v5.4.19 [32mbuilding for production...[36m[39m
+transforming...
+Browserslist: browsers data (caniuse-lite) is 7 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+[32mΓ£ô[39m 3353 modules transformed.
+rendering chunks...
+computing gzip size...
+[2mdist/[22m[32mindex.html                              [39m[1m[2m  1.57 kB[22m[1m[22m[2m Γöé gzip:   0.63 kB[22m
+[2mdist/[22m[32massets/featured-creator-3-COrZOfEf.jpg  [39m[1m[2m 34.27 kB[22m[1m[22m
+[2mdist/[22m[32massets/featured-creator-1-SLT3-qal.jpg  [39m[1m[2m 48.70 kB[22m[1m[22m
+[2mdist/[22m[32massets/featured-creator-2-BXVvlX-r.jpg  [39m[1m[2m 52.98 kB[22m[1m[22m
+[2mdist/[22m[32massets/hero-banner-BIn156h-.jpg         [39m[1m[2m122.63 kB[22m[1m[22m
+[2mdist/[22m[35massets/CourseViewer-BEHUn5zE.css        [39m[1m[2m  1.32 kB[22m[1m[22m[2m Γöé gzip:   0.61 kB[22m
+[2mdist/[22m[35massets/index-DhBc12G_.css               [39m[1m[2m 82.19 kB[22m[1m[22m[2m Γöé gzip:  13.90 kB[22m
+[2mdist/[22m[36massets/render_resend-BIHI7g3E.js        [39m[1m[2m  0.03 kB[22m[1m[22m[2m Γöé gzip:   0.05 kB[22m
+[2mdist/[22m[36massets/chevron-down-BMt83JiQ.js         [39m[1m[2m  0.30 kB[22m[1m[22m[2m Γöé gzip:   0.24 kB[22m
+[2mdist/[22m[36massets/arrow-left-BGEil9Tk.js           [39m[1m[2m  0.33 kB[22m[1m[22m[2m Γöé gzip:   0.27 kB[22m
+[2mdist/[22m[36massets/label-DVBjSJ0E.js                [39m[1m[2m  0.55 kB[22m[1m[22m[2m Γöé gzip:   0.38 kB[22m
+[2mdist/[22m[36massets/input-CINuCkjZ.js                [39m[1m[2m  0.58 kB[22m[1m[22m[2m Γöé gzip:   0.36 kB[22m
+[2mdist/[22m[36massets/NotFound-CgwoED0u.js             [39m[1m[2m  0.62 kB[22m[1m[22m[2m Γöé gzip:   0.38 kB[22m
+[2mdist/[22m[36massets/trash-2-DchIOJ1Q.js              [39m[1m[2m  1.42 kB[22m[1m[22m[2m Γöé gzip:   0.56 kB[22m
+[2mdist/[22m[36massets/Footer-D_oYsM8v.js               [39m[1m[2m  1.82 kB[22m[1m[22m[2m Γöé gzip:   0.60 kB[22m
+[2mdist/[22m[36massets/tabs-BGbsXDWp.js                 [39m[1m[2m  3.26 kB[22m[1m[22m[2m Γöé gzip:   1.37 kB[22m
+[2mdist/[22m[36massets/AdminDashboard-BxoC9fWD.js       [39m[1m[2m  3.28 kB[22m[1m[22m[2m Γöé gzip:   1.13 kB[22m
+[2mdist/[22m[36massets/Explore-BseDcCSv.js              [39m[1m[2m  3.70 kB[22m[1m[22m[2m Γöé gzip:   1.59 kB[22m
+[2mdist/[22m[36massets/Auth-DzbD_yxh.js                 [39m[1m[2m  4.62 kB[22m[1m[22m[2m Γöé gzip:   1.90 kB[22m
+[2mdist/[22m[36massets/CloudinaryUpload-CKaEfNtY.js     [39m[1m[2m  4.92 kB[22m[1m[22m[2m Γöé gzip:   2.09 kB[22m
+[2mdist/[22m[36massets/alert-dialog-tBWtnRFv.js         [39m[1m[2m  5.19 kB[22m[1m[22m[2m Γöé gzip:   1.89 kB[22m
+[2mdist/[22m[36massets/CreatorStorefront-CR-G3k5g.js    [39m[1m[2m  6.55 kB[22m[1m[22m[2m Γöé gzip:   2.24 kB[22m
+[2mdist/[22m[36massets/Landing-Wdqshaqy.js              [39m[1m[2m  6.81 kB[22m[1m[22m[2m Γöé gzip:   2.24 kB[22m
+[2mdist/[22m[36massets/LessonsManager-DS4Om1m3.js       [39m[1m[2m 11.23 kB[22m[1m[22m[2m Γöé gzip:   3.66 kB[22m
+[2mdist/[22m[36massets/select-KSeKSIto.js               [39m[1m[2m 21.44 kB[22m[1m[22m[2m Γöé gzip:   7.53 kB[22m
+[2mdist/[22m[36massets/index-DmbfezAe.js                [39m[1m[2m 25.21 kB[22m[1m[22m[2m Γöé gzip:   9.14 kB[22m
+[2mdist/[22m[36massets/Dashboard-B4iXGht2.js            [39m[1m[2m 39.58 kB[22m[1m[22m[2m Γöé gzip:  10.60 kB[22m
+[2mdist/[22m[36massets/validation-CNY9ubbX.js           [39m[1m[2m 55.50 kB[22m[1m[22m[2m Γöé gzip:  12.68 kB[22m
+[2mdist/[22m[36massets/Navbar-C46oZRYq.js               [39m[1m[2m 62.94 kB[22m[1m[22m[2m Γöé gzip:  19.09 kB[22m
+[2mdist/[22m[36massets/Checkout-DK2_I7-o.js             [39m[1m[2m179.80 kB[22m[1m[22m[2m Γöé gzip:  33.33 kB[22m
+[2mdist/[22m[36massets/CourseViewer-BCVM4IxB.js         [39m[1m[2m383.30 kB[22m[1m[22m[2m Γöé gzip: 115.97 kB[22m
+[2mdist/[22m[36massets/index-DpVenWYC.js                [39m[1m[2m482.21 kB[22m[1m[22m[2m Γöé gzip: 146.95 kB[22m
+[32mΓ£ô built in 8.83s[39m

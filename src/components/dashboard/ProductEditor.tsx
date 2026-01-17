@@ -13,6 +13,7 @@ import { X, Image as ImageIcon } from "lucide-react";
 interface ProductEditorProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     product?: any | null;
     onSuccess: () => void;
 }

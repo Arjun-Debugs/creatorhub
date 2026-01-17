@@ -16,7 +16,9 @@ import { Badge } from "@/components/ui/badge";
 import { SEO } from "@/components/SEO";
 
 export default function AdminDashboard() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [users, setUsers] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [courses, setCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 

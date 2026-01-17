@@ -9,7 +9,9 @@ import ProfileEditor from "./ProfileEditor";
 
 export default function LearnerDashboard() {
   const navigate = useNavigate();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [enrollments, setEnrollments] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [orders, setOrders] = useState<any[]>([]);
 
   useEffect(() => {

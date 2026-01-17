@@ -36,7 +36,7 @@ export default function LessonEditor({
     useEffect(() => {
         if (lesson) {
             setTitle(lesson.title);
-            setContentType((lesson.content_type as any) || "video");
+            setContentType((lesson.content_type as "video" | "pdf" | "image" | "audio") || "video");
             setContentUrl(lesson.content_url || "");
             // Extract public_id from Cloudinary URL if exists
             if (lesson.content_url?.includes('cloudinary.com')) {
@@ -156,7 +156,7 @@ export default function LessonEditor({
 
                     <div className="space-y-2">
                         <Label htmlFor="contentType">Content Type</Label>
-                        <Select value={contentType} onValueChange={(value: any) => setContentType(value)}>
+                        <Select value={contentType} onValueChange={(value: "video" | "pdf" | "image" | "audio") => setContentType(value)}>
                             <SelectTrigger>
                                 <SelectValue />
                             </SelectTrigger>
@@ -193,6 +193,7 @@ export default function LessonEditor({
                         <Label>Upload Content</Label>
                         <CloudinaryUpload
                             onUploadSuccess={handleUploadSuccess}
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
                             acceptedTypes={getAcceptedTypes() as any}
                             buttonText={contentUrl ? "Replace File" : "Upload File"}
                             maxFileSize={200}
